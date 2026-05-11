@@ -23,9 +23,16 @@ jobs:
           api-level: 33
           build-tools: 33.0.0
           
-      - name: Generate Gradle Wrapper
-        run: gradle wrapper --gradle-version 7.5
-        
+      - name: Download Gradle 7.5
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-7.5-bin.zip
+          unzip -q gradle-7.5-bin.zip
+          echo "$(pwd)/gradle-7.5/bin" >> $GITHUB_PATH
+          
+      - name: Generate Wrapper with Gradle 7.5
+        run: |
+          gradle wrapper --gradle-version 7.5
+          
       - name: Build APK
         run: ./gradlew assembleDebug --no-daemon
         
