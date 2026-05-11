@@ -1,106 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#FFFFFF">
+    android:orientation="vertical">
 
-    <!-- Top toolbar -->
-    <LinearLayout
+    <!-- شريط الأدوات -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:background="@color/primary_dark"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:elevation="4dp"
+        app:contentInsetStart="0dp">
 
-        <ImageButton
-            android:id="@+id/btn_back"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@android:drawable/ic_media_rew"
-            android:tint="#FFFFFF"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/back"
-            android:scaleType="fitCenter"
-            android:padding="12dp" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/tv_page_title"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/app_name"
-            android:textColor="#FFFFFF"
-            android:textSize="17sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:ellipsize="end"
-            android:maxLines="1" />
+            <ImageButton
+                android:id="@+id/backButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_arrow_back"
+                android:contentDescription="@string/back"
+                android:layout_marginStart="4dp"/>
 
-        <!-- spacer to balance the back button -->
-        <View
-            android:layout_width="48dp"
-            android:layout_height="48dp" />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Nova POS - بوابة النادل"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:gravity="center"/>
 
-    </LinearLayout>
+            <View
+                android:layout_width="48dp"
+                android:layout_height="48dp"/>
+        </LinearLayout>
+    </androidx.appcompat.widget.Toolbar>
 
-    <!-- Progress bar under toolbar -->
+    <!-- شريط التقدم -->
     <ProgressBar
-        android:id="@+id/progress_bar"
+        android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
         android:layout_height="3dp"
-        android:progressTint="@color/primary_blue"
-        android:progressBackgroundTint="@color/background_light"
-        android:max="100"
-        android:visibility="gone" />
+        android:progressTint="@color/primary_light"
+        android:visibility="gone"/>
 
-    <!-- Error layout -->
-    <LinearLayout
-        android:id="@+id/layout_error"
+    <!-- رسالة الخطأ -->
+    <TextView
+        android:id="@+id/errorText"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
+        android:layout_height="wrap_content"
         android:gravity="center"
-        android:padding="32dp"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="⚠️"
-            android:textSize="48sp"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:id="@+id/tv_error_message"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/connection_error"
-            android:textColor="@color/text_secondary"
-            android:textSize="15sp"
-            android:gravity="center"
-            android:layout_marginBottom="24dp" />
-
-        <Button
-            android:id="@+id/btn_retry"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:paddingStart="32dp"
-            android:paddingEnd="32dp"
-            android:text="@string/btn_retry"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="@color/primary_blue"
-            android:stateListAnimator="@null" />
-
-    </LinearLayout>
+        android:padding="16dp"
+        android:text="تعذر الاتصال بالسيرفر\nاضغط لإعادة المحاولة"
+        android:textColor="@color/error"
+        android:textSize="16sp"
+        android:visibility="gone"/>
 
     <!-- WebView -->
     <WebView
-        android:id="@+id/webview"
+        android:id="@+id/webView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_height="match_parent"/>
 
 </LinearLayout>
