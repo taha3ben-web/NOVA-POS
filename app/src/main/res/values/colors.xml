@@ -1,21 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary brand colors from Nova logo -->
-    <color name="primary_blue">#1A237E</color>
-    <color name="primary_dark">#0D1B6E</color>
-    <color name="accent_red">#C62828</color>
-    <color name="accent_red_light">#EF5350</color>
-
-    <!-- UI colors -->
-    <color name="background_light">#F5F5F5</color>
-    <color name="card_background">#FFFFFF</color>
-    <color name="button_secondary">#E0E0E0</color>
-    <color name="text_primary">#212121</color>
-    <color name="text_secondary">#757575</color>
-    <color name="text_hint">#BDBDBD</color>
-    <color name="divider">#E0E0E0</color>
+    <color name="primary">#1565C0</color>
+    <color name="primary_dark">#0D47A1</color>
+    <color name="primary_light">#42A5F5</color>
+    <color name="accent">#FF6F00</color>
     <color name="white">#FFFFFF</color>
-
-    <!-- Status bar -->
-    <color name="statusBarColor">#0D1B6E</color>
+    <color name="black">#000000</color>
+    <color name="gray_light">#F5F5F5</color>
+    <color name="gray_medium">#90A4AE</color>
+    <color name="gray_dark">#546E7A</color>
+    <color name="text_primary">#263238</color>
+    <color name="text_secondary">#78909C</color>
+    <color name="success">#4CAF50</color>
+    <color name="error">#F44336</color>
 </resources>
