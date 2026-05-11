@@ -1,143 +1,261 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/background_light">
+    android:background="@drawable/bg_gradient">
 
-    <!-- Header bar -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:background="@color/primary_dark"
-        android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:orientation="horizontal">
+    <!-- شعار التطبيق في الأعلى -->
+    <ImageView
+        android:id="@+id/logoImage"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/ic_restaurant"
+        android:contentDescription="Nova POS Logo"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="40dp"/>
 
-        <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@mipmap/ic_launcher"
-            android:contentDescription="Logo" />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/app_name"
-            android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:fontFamily="sans-serif-medium" />
-
-        <View android:layout_width="32dp" android:layout_height="32dp" />
-
-    </LinearLayout>
-
-    <!-- QR Scanner View -->
-    <com.journeyapps.barcodescanner.CompoundBarcodeView
-        android:id="@+id/barcode_scanner"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-
-    <!-- Scan hint below scanner -->
+    <!-- عنوان التطبيق -->
     <TextView
-        android:id="@+id/tv_scan_status"
-        android:layout_width="match_parent"
+        android:id="@+id/titleText"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/scan_qr_hint"
-        android:textColor="@color/primary_blue"
-        android:textSize="13sp"
-        android:gravity="center"
-        android:paddingTop="8dp"
-        android:paddingBottom="4dp"
-        android:background="@color/background_light" />
+        android:text="Nova POS"
+        android:textSize="28sp"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif-medium"
+        app:layout_constraintTop_toBottomOf="@id/logoImage"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="12dp"/>
 
-    <!-- Bottom card with inputs -->
+    <!-- وصف -->
+    <TextView
+        android:id="@+id/subtitleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="نظام النادل الذكي"
+        android:textSize="14sp"
+        android:textColor="#B0BEC5"
+        app:layout_constraintTop_toBottomOf="@id/titleText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="4dp"/>
+
+    <!-- بطاقة الماسح -->
     <androidx.cardview.widget.CardView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="12dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="6dp"
-        app:cardBackgroundColor="@color/card_background">
+        android:id="@+id/scannerCard"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="#FFFFFF"
+        app:layout_constraintTop_toBottomOf="@id/subtitleText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="30dp">
 
-        <LinearLayout
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_height="match_parent">
 
-            <!-- IP input label -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/manual_ip_label"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="6dp" />
-
-            <!-- IP input field -->
-            <EditText
-                android:id="@+id/et_ip_address"
+            <!-- ماسح QR Code -->
+            <com.journeyapps.barcodescanner.CompoundBarcodeView
+                android:id="@+id/barcode_scanner"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:hint="@string/ip_hint"
-                android:inputType="textUri"
-                android:textSize="15sp"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_hint"
-                android:background="@drawable/edittext_background"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:imeOptions="actionDone"
-                android:singleLine="true" />
+                android:layout_height="match_parent"/>
 
-            <!-- Last connection text -->
-            <TextView
-                android:id="@+id/tv_last_connection"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/primary_blue"
-                android:textSize="12sp"
-                android:paddingTop="6dp"
-                android:paddingBottom="2dp"
-                android:visibility="gone"
-                android:drawablePadding="4dp"
-                android:text="@string/last_connection" />
-
-            <!-- Connect button -->
-            <Button
-                android:id="@+id/btn_connect"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="12dp"
-                android:text="@string/btn_connect"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:backgroundTint="@color/primary_blue"
-                android:stateListAnimator="@null" />
-
-            <!-- Switch camera button -->
-            <Button
-                android:id="@+id/btn_switch_camera"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/camera_front"
-                android:textSize="13sp"
-                android:textColor="@color/text_secondary"
-                android:backgroundTint="@color/button_secondary"
-                android:stateListAnimator="@null" />
-
-        </LinearLayout>
-
+            <!-- حدود الماسح -->
+            <View
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:layout_gravity="center"
+                android:background="@drawable/scanner_border"/>
+        </FrameLayout>
     </androidx.cardview.widget.CardView>
 
-</LinearLayout>
+    <!-- نص إرشادي -->
+    <TextView
+        android:id="@+id/scanHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="وجه الكاميرا نحو QR Code"
+        android:textSize="12sp"
+        android:textColor="#78909C"
+        app:layout_constraintTop_toBottomOf="@id/scannerCard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"/>
+
+    <!-- فاصل "أو" -->
+    <LinearLayout
+        android:id="@+id/orDivider"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/scanHint"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="40dp">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1"
+            android:background="#4FC3F7"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="  أو  "
+            android:textColor="#4FC3F7"
+            android:textSize="14sp"
+            android:layout_marginHorizontal="12dp"/>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1"
+            android:background="#4FC3F7"/>
+    </LinearLayout>
+
+    <!-- حقل إدخال IP -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/ipInputLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toBottomOf="@id/orDivider"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginHorizontal="40dp"
+        android:layout_marginTop="16dp"
+        app:boxBackgroundColor="#FFFFFF"
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:hintEnabled="false"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/ipInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="عنوان السيرفر (IP)"
+            android:textSize="15sp"
+            android:padding="16dp"
+            android:textColor="#263238"
+            android:textColorHint="#90A4AE"
+            android:inputType="textUri"
+            android:drawableStart="@drawable/ic_server"
+            android:drawablePadding="12dp"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- آخر اتصال -->
+    <TextView
+        android:id="@+id/lastConnection"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="آخر اتصال: -"
+        android:textSize="11sp"
+        android:textColor="#78909C"
+        android:gravity="end"
+        app:layout_constraintTop_toBottomOf="@id/ipInputLayout"
+        app:layout_constraintEnd_toEndOf="@id/ipInputLayout"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="4dp"/>
+
+    <!-- زر الاتصال -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/connectButton"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:text="اتصال بالسيرفر"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/lastConnection"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginHorizontal="40dp"
+        android:layout_marginTop="20dp"
+        app:cornerRadius="28dp"
+        app:backgroundTint="#1565C0"
+        app:icon="@drawable/ic_connect"
+        app:iconGravity="textStart"
+        android:letterSpacing="0.05"/>
+
+    <!-- أزرار إضافية -->
+    <LinearLayout
+        android:id="@+id/extraButtons"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/connectButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="20dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/switchCameraButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:cornerRadius="24dp"
+            app:backgroundTint="#42A5F5"
+            app:icon="@drawable/ic_camera_switch"
+            android:contentDescription="تبديل الكاميرا"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/flashButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:cornerRadius="24dp"
+            app:backgroundTint="#66BB6A"
+            app:icon="@drawable/ic_flash"
+            android:layout_marginHorizontal="16dp"
+            android:contentDescription="فلاش"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/settingsButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:cornerRadius="24dp"
+            app:backgroundTint="#78909C"
+            app:icon="@drawable/ic_settings"
+            android:contentDescription="إعدادات"/>
+    </LinearLayout>
+
+    <!-- شريط الحالة السفلي -->
+    <LinearLayout
+        android:id="@+id/statusBar"
+        android:layout_width="0dp"
+        android:layout_height="2dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="2dp"
+            android:layout_weight="1"
+            android:background="#1565C0"/>
+        <View
+            android:layout_width="0dp"
+            android:layout_height="2dp"
+            android:layout_weight="1"
+            android:background="#42A5F5"/>
+        <View
+            android:layout_width="0dp"
+            android:layout_height="2dp"
+            android:layout_weight="1"
+            android:background="#90CAF9"/>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
