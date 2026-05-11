@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nova POS</string>
+    <string name="scan_qr_hint">امسح QR Code الخاص بالسيرفر أو أدخل الـ IP يدوياً</string>
+    <string name="manual_ip_label">عنوان السيرفر (IP)</string>
+    <string name="ip_hint">مثال: 192.168.1.5:3000</string>
+    <string name="btn_connect">اتصال</string>
+    <string name="btn_retry">إعادة المحاولة</string>
+    <string name="camera_front">تبديل إلى الكاميرا الأمامية</string>
+    <string name="camera_back">تبديل إلى الكاميرا الخلفية</string>
+    <string name="last_connection">آخر اتصال:</string>
+    <string name="enter_ip">يرجى إدخال عنوان IP</string>
+    <string name="camera_permission_denied">تم رفض صلاحية الكاميرا. يمكنك إدخال الـ IP يدوياً.</string>
+    <string name="connection_error">تعذر الاتصال بالسيرفر.\nتحقق من عنوان IP والاتصال بالشبكة.</string>
+    <string name="back">رجوع</string>
+    <string name="loading">جارٍ التحميل…</string>
+</resources>
