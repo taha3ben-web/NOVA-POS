@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -23,16 +23,10 @@ jobs:
           api-level: 33
           build-tools: 33.0.0
           
-      - name: Make gradlew executable
-        run: |
-          chmod +x gradlew
-          sed -i 's/\r$//' gradlew
-          
       - name: Generate Gradle Wrapper
-        run: |
-          gradle wrapper --gradle-version 7.5
-          
-      - name: Build Debug APK
+        run: gradle wrapper --gradle-version 7.5
+        
+      - name: Build APK
         run: ./gradlew assembleDebug --no-daemon
         
       - name: Upload APK
