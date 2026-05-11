@@ -5,223 +5,229 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.text.TextUtils;
+import android.os.Handler;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.ResultPoint;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
 import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
 import com.journeyapps.barcodescanner.CompoundBarcodeView;
-import com.journeyapps.barcodescanner.DefaultDecoderFactory;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final int CAMERA_PERMISSION_CODE = 100;
-    private static final String PREFS_NAME = "NovaPOS_Prefs";
-    private static final String KEY_LAST_IP = "last_ip";
-
-    private CompoundBarcodeView barcodeView;
-    private EditText etIpAddress;
-    private Button btnConnect;
-    private Button btnSwitchCamera;
-    private TextView tvLastConnection;
-    private TextView tvScanStatus;
-
-    private SharedPreferences sharedPreferences;
-    private boolean isUsingFrontCamera = false;
-    private boolean scannerActive = false;
-    private boolean resultHandled = false;
-
-    private final BarcodeCallback barcodeCallback = new BarcodeCallback() {
-        @Override
-        public void barcodeResult(BarcodeResult result) {
-            if (result.getText() == null || resultHandled) return;
-            resultHandled = true;
-            barcodeView.pause();
-
-            String scannedText = result.getText().trim();
-            String url = buildUrl(scannedText);
-
-            saveLastIp(extractIp(url));
-            openWebView(url);
-        }
-
-        @Override
-        public void possibleResultPoints(List<ResultPoint> resultPoints) {
-        }
-    };
+    private static final int CAMERA_PERMISSION_REQUEST = 100;
+    private CompoundBarcodeView barcodeScanner;
+    private TextInputEditText ipInput;
+    private MaterialButton connectButton, switchCameraButton, flashButton;
+    private TextView lastConnectionText;
+    private SharedPreferences prefs;
+    private boolean isFlashOn = false;
+    private boolean isFrontCamera = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        sharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        // تهيئة SharedPreferences
+        prefs = getSharedPreferences("NovaPOS", MODE_PRIVATE);
 
-        initViews();
-        loadLastIp();
+        // ربط العناصر
+        barcodeScanner = findViewById(R.id.barcode_scanner);
+        ipInput = findViewById(R.id.ipInput);
+        connectButton = findViewById(R.id.connectButton);
+        switchCameraButton = findViewById(R.id.switchCameraButton);
+        flashButton = findViewById(R.id.flashButton);
+        lastConnectionText = findViewById(R.id.lastConnection);
 
-        if (hasCameraPermission()) {
-            startScanner();
-        } else {
-            requestCameraPermission();
+        // تحميل آخر IP
+        String lastIp = prefs.getString("last_ip", "");
+        if (!lastIp.isEmpty()) {
+            ipInput.setText(lastIp);
+            lastConnectionText.setText("آخر اتصال: " + lastIp);
         }
-    }
 
-    private void initViews() {
-        barcodeView     = findViewById(R.id.barcode_scanner);
-        etIpAddress     = findViewById(R.id.et_ip_address);
-        btnConnect      = findViewById(R.id.btn_connect);
-        btnSwitchCamera = findViewById(R.id.btn_switch_camera);
-        tvLastConnection = findViewById(R.id.tv_last_connection);
-        tvScanStatus    = findViewById(R.id.tv_scan_status);
+        // طلب صلاحية الكاميرا
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.CAMERA},
+                    CAMERA_PERMISSION_REQUEST);
+        } else {
+            startScanner();
+        }
 
-        Collection<BarcodeFormat> formats = Arrays.asList(BarcodeFormat.QR_CODE);
-        barcodeView.getBarcodeView().setDecoderFactory(new DefaultDecoderFactory(formats));
-        barcodeView.setStatusText("");
+        // زر الاتصال
+        connectButton.setOnClickListener(v -> connectToServer());
 
-        btnConnect.setOnClickListener(v -> onConnectClicked());
-
-        btnSwitchCamera.setOnClickListener(v -> switchCamera());
-
-        tvLastConnection.setOnClickListener(v -> {
-            String lastIp = sharedPreferences.getString(KEY_LAST_IP, "");
-            if (!TextUtils.isEmpty(lastIp)) {
-                String url = buildUrl(lastIp);
-                openWebView(url);
+        // النقر على آخر اتصال
+        lastConnectionText.setOnClickListener(v -> {
+            String savedIp = prefs.getString("last_ip", "");
+            if (!savedIp.isEmpty()) {
+                ipInput.setText(savedIp);
+                connectToServer();
             }
+        });
+
+        // تبديل الكاميرا
+        switchCameraButton.setOnClickListener(v -> {
+            isFrontCamera = !isFrontCamera;
+            barcodeScanner.pause();
+            if (isFrontCamera) {
+                barcodeScanner.getBarcodeView().setCameraId(1); // أمامية
+            } else {
+                barcodeScanner.getBarcodeView().setCameraId(0); // خلفية
+            }
+            barcodeScanner.resume();
+        });
+
+        // الفلاش
+        flashButton.setOnClickListener(v -> {
+            if (!isFrontCamera) {
+                isFlashOn = !isFlashOn;
+                if (isFlashOn) {
+                    barcodeScanner.setTorchOn();
+                } else {
+                    barcodeScanner.setTorchOff();
+                }
+            } else {
+                Toast.makeText(this, "الفلاش يعمل فقط مع الكاميرا الخلفية", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // فتح الإعدادات
+        findViewById(R.id.settingsButton).setOnClickListener(v -> {
+            Toast.makeText(this, "الإعدادات قريباً", Toast.LENGTH_SHORT).show();
         });
     }
 
-    private void loadLastIp() {
-        String lastIp = sharedPreferences.getString(KEY_LAST_IP, "");
-        if (!TextUtils.isEmpty(lastIp)) {
-            tvLastConnection.setVisibility(View.VISIBLE);
-            tvLastConnection.setText(getString(R.string.last_connection) + " " + lastIp);
-            etIpAddress.setText(lastIp);
-        } else {
-            tvLastConnection.setVisibility(View.GONE);
-        }
-    }
-
-    private void saveLastIp(String ip) {
-        sharedPreferences.edit().putString(KEY_LAST_IP, ip).apply();
-    }
-
-    private String extractIp(String url) {
-        // Strip http:// or https://
-        String ip = url;
-        if (ip.startsWith("http://"))  ip = ip.substring(7);
-        if (ip.startsWith("https://")) ip = ip.substring(8);
-        // Strip trailing path
-        int slash = ip.indexOf('/');
-        if (slash != -1) ip = ip.substring(0, slash);
-        return ip;
-    }
-
-    private String buildUrl(String input) {
-        input = input.trim();
-
-        // If it already looks like a full URL, just ensure /waiter path
-        if (input.startsWith("http://") || input.startsWith("https://")) {
-            if (!input.contains(":3000")) {
-                // Insert port before any path
-                int pathStart = input.indexOf('/', 8);
-                if (pathStart != -1) {
-                    input = input.substring(0, pathStart) + ":3000" + input.substring(pathStart);
-                } else {
-                    input = input + ":3000";
+    private void startScanner() {
+        barcodeScanner.decodeContinuous(new BarcodeCallback() {
+            @Override
+            public void barcodeResult(BarcodeResult result) {
+                if (result.getText() != null) {
+                    String scannedText = result.getText();
+                    barcodeScanner.pause();
+                    
+                    // استخراج IP من النص الممسوح
+                    String ip = extractIpFromText(scannedText);
+                    if (ip != null) {
+                        ipInput.setText(ip);
+                        // اهتزاز خفيف للتأكيد
+                        android.os.Vibrator vibrator = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
+                        if (vibrator != null) {
+                            vibrator.vibrate(100);
+                        }
+                        // اتصال تلقائي بعد ثانية
+                        new Handler().postDelayed(() -> connectToServer(), 800);
+                    }
                 }
             }
-            return input;
-        }
 
-        // It's a bare IP or IP:port
-        if (!input.contains(":")) {
-            input = input + ":3000";
-        }
-        return "http://" + input;
+            @Override
+            public void possibleResultPoints(java.util.List<com.google.zxing.ResultPoint> resultPoints) {
+                // تجاهل
+            }
+        });
+        barcodeScanner.resume();
     }
 
-    private void onConnectClicked() {
-        String ipText = etIpAddress.getText().toString().trim();
-        if (TextUtils.isEmpty(ipText)) {
-            Toast.makeText(this, R.string.enter_ip, Toast.LENGTH_SHORT).show();
+    private String extractIpFromText(String text) {
+        // إذا كان رابط كامل
+        if (text.startsWith("http://") || text.startsWith("https://")) {
+            return text.replace("http://", "").replace("https://", "").split("/")[0];
+        }
+        // إذا كان IP:PORT مباشرة
+        if (text.matches(".*\\d+\\.\\d+\\.\\d+\\.\\d+.*")) {
+            return text.replaceAll("[^0-9.:]", "");
+        }
+        // إذا كان nova.local
+        if (text.contains("nova.local")) {
+            return text;
+        }
+        return text;
+    }
+
+    private void connectToServer() {
+        String ip = ipInput.getText().toString().trim();
+        
+        if (ip.isEmpty()) {
+            Toast.makeText(this, "الرجاء إدخال عنوان السيرفر", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String url = buildUrl(ipText);
-        saveLastIp(extractIp(url));
-        loadLastIp();
-        openWebView(url);
-    }
-
-    private void openWebView(String url) {
-        Intent intent = new Intent(this, WebViewActivity.class);
-        intent.putExtra(WebViewActivity.EXTRA_URL, url);
-        startActivity(intent);
-        resultHandled = false; // reset for next time
-    }
-
-    private void switchCamera() {
-        isUsingFrontCamera = !isUsingFrontCamera;
-        barcodeView.pause();
-        if (isUsingFrontCamera) {
-            barcodeView.getCameraSettings().setRequestedCameraId(1);
-        } else {
-            barcodeView.getCameraSettings().setRequestedCameraId(0);
+        // تنظيف الـ IP
+        ip = ip.replace("http://", "").replace("https://", "");
+        if (!ip.contains(":")) {
+            ip = ip + ":3000";
         }
-        barcodeView.resume();
-        btnSwitchCamera.setText(isUsingFrontCamera
-                ? R.string.camera_back
-                : R.string.camera_front);
+
+        // حفظ الـ IP
+        prefs.edit().putString("last_ip", ip).apply();
+        lastConnectionText.setText("آخر اتصال: " + ip);
+        
+        connectButton.setText("جاري الاتصال...");
+        connectButton.setEnabled(false);
+
+        // اختبار الاتصال في خلفية
+        final String finalIp = ip;
+        new Thread(() -> {
+            boolean reachable = testConnection(finalIp);
+            runOnUiThread(() -> {
+                connectButton.setText("اتصال بالسيرفر");
+                connectButton.setEnabled(true);
+                
+                if (reachable) {
+                    // فتح WebView
+                    Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
+                    intent.putExtra("url", "http://" + finalIp + "/waiter");
+                    startActivity(intent);
+                } else {
+                    // اقتراح فتح الرابط مباشرة
+                    new androidx.appcompat.app.AlertDialog.Builder(MainActivity.this)
+                        .setTitle("تعذر الاتصال")
+                        .setMessage("لم نتمكن من الاتصال بـ " + finalIp + "\n\nهل تريد المحاولة مباشرة؟")
+                        .setPositiveButton("نعم", (dialog, which) -> {
+                            Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
+                            intent.putExtra("url", "http://" + finalIp + "/waiter");
+                            startActivity(intent);
+                        })
+                        .setNegativeButton("لا", null)
+                        .show();
+                }
+            });
+        }).start();
     }
 
-    private void startScanner() {
-        scannerActive = true;
-        resultHandled = false;
-        barcodeView.decodeContinuous(barcodeCallback);
-        barcodeView.resume();
-        if (tvScanStatus != null) {
-            tvScanStatus.setText(R.string.scan_qr_hint);
+    private boolean testConnection(String ip) {
+        try {
+            String host = ip.split(":")[0];
+            int port = ip.contains(":") ? Integer.parseInt(ip.split(":")[1]) : 3000;
+            Socket socket = new Socket();
+            socket.connect(new InetSocketAddress(host, port), 3000);
+            socket.close();
+            return true;
+        } catch (Exception e) {
+            return false;
         }
-    }
-
-    private boolean hasCameraPermission() {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this,
-                new String[]{Manifest.permission.CAMERA},
-                CAMERA_PERMISSION_CODE);
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == CAMERA_PERMISSION_CODE) {
+        if (requestCode == CAMERA_PERMISSION_REQUEST) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startScanner();
             } else {
-                Toast.makeText(this, R.string.camera_permission_denied, Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "صلاحية الكاميرا مطلوبة لمسح QR Code", Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -229,22 +235,29 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (hasCameraPermission() && scannerActive) {
-            resultHandled = false;
-            barcodeView.resume();
+        if (barcodeScanner != null) {
+            barcodeScanner.resume();
         }
-        loadLastIp();
+        // تحميل آخر IP عند العودة
+        String lastIp = prefs.getString("last_ip", "");
+        if (!lastIp.isEmpty() && ipInput.getText().toString().isEmpty()) {
+            ipInput.setText(lastIp);
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        barcodeView.pause();
+        if (barcodeScanner != null) {
+            barcodeScanner.pause();
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        barcodeView.pause();
+        if (barcodeScanner != null) {
+            barcodeScanner.pause();
+        }
     }
 }
