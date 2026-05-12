@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout 
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_gradient">
 
-    <!-- شعار NOVA بدون خلفية -->
+    <!-- شعار NOVA بدون خلفية - 180dp فوق الكاميرا مباشرة -->
     <ImageView
         android:id="@+id/logoImage"
         android:layout_width="180dp"
@@ -14,28 +14,14 @@
         android:src="@drawable/logo_nova"
         android:contentDescription="NOVA Logo"
         android:scaleType="fitCenter"
+        app:layout_constraintBottom_toTopOf="@id/scannerCard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="40dp"/>
+        app:layout_constraintVertical_chainStyle="packed"
+        android:layout_marginBottom="20dp" />
 
-    <!-- عنوان NOVA POS فقط -->
-    <TextView
-        android:id="@+id/titleText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="NOVA POS"
-        android:textSize="32sp"
-        android:textColor="#FFFFFF"
-        android:textStyle="bold"
-        android:fontFamily="sans-serif-medium"
-        android:letterSpacing="0.1"
-        app:layout_constraintTop_toBottomOf="@id/logoImage"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="4dp"/>
-
-    <!-- بطاقة الماسح -->
+    <!-- بطاقة الماسح (الكاميرا) -->
     <androidx.cardview.widget.CardView
         android:id="@+id/scannerCard"
         android:layout_width="220dp"
@@ -43,10 +29,10 @@
         app:cardCornerRadius="24dp"
         app:cardElevation="12dp"
         app:cardBackgroundColor="#FFFFFF"
-        app:layout_constraintTop_toBottomOf="@id/titleText"
+        app:layout_constraintTop_toBottomOf="@id/logoImage"
+        app:layout_constraintBottom_toTopOf="@id/orDivider"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="25dp">
+        app:layout_constraintEnd_toEndOf="parent">
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -55,7 +41,7 @@
             <com.journeyapps.barcodescanner.CompoundBarcodeView
                 android:id="@+id/barcode_scanner"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+                android:layout_height="match_parent" />
 
         </FrameLayout>
     </androidx.cardview.widget.CardView>
@@ -68,16 +54,18 @@
         android:orientation="horizontal"
         android:gravity="center"
         app:layout_constraintTop_toBottomOf="@id/scannerCard"
+        app:layout_constraintBottom_toTopOf="@id/ipInputLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="20dp"
+        android:layout_marginBottom="16dp"
         android:layout_marginHorizontal="50dp">
 
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1"
-            android:background="#64B5F6"/>
+            android:background="#64B5F6" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -86,13 +74,13 @@
             android:textColor="#FFFFFF"
             android:textSize="15sp"
             android:textStyle="bold"
-            android:layout_marginHorizontal="14dp"/>
+            android:layout_marginHorizontal="14dp" />
 
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
             android:layout_weight="1"
-            android:background="#64B5F6"/>
+            android:background="#64B5F6" />
     </LinearLayout>
 
     <!-- حقل إدخال IP -->
@@ -101,10 +89,10 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toBottomOf="@id/orDivider"
+        app:layout_constraintBottom_toTopOf="@id/lastConnection"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginHorizontal="40dp"
-        android:layout_marginTop="16dp"
         app:boxBackgroundColor="#FFFFFF"
         app:boxCornerRadiusTopStart="14dp"
         app:boxCornerRadiusTopEnd="14dp"
@@ -122,7 +110,7 @@
             android:padding="16dp"
             android:textColor="#263238"
             android:textColorHint="#90A4AE"
-            android:inputType="textUri"/>
+            android:inputType="textUri" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <!-- آخر اتصال -->
@@ -135,9 +123,11 @@
         android:textColor="#90CAF9"
         android:gravity="end"
         app:layout_constraintTop_toBottomOf="@id/ipInputLayout"
+        app:layout_constraintBottom_toTopOf="@id/connectButton"
         app:layout_constraintEnd_toEndOf="@id/ipInputLayout"
         android:layout_marginTop="6dp"
-        android:layout_marginEnd="4dp"/>
+        android:layout_marginEnd="4dp"
+        android:layout_marginBottom="20dp" />
 
     <!-- زر الاتصال -->
     <com.google.android.material.button.MaterialButton
@@ -148,12 +138,13 @@
         android:textSize="16sp"
         android:textStyle="bold"
         app:layout_constraintTop_toBottomOf="@id/lastConnection"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginHorizontal="40dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginBottom="40dp"
         app:cornerRadius="27dp"
         app:backgroundTint="#1565C0"
-        android:letterSpacing="0.05"/>
+        android:letterSpacing="0.05" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
