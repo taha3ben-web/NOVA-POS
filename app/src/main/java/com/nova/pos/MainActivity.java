@@ -18,6 +18,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
 import com.journeyapps.barcodescanner.CompoundBarcodeView;
+import com.journeyapps.barcodescanner.camera.CameraSettings;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
@@ -37,10 +38,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // تهيئة SharedPreferences
         prefs = getSharedPreferences("NovaPOS", MODE_PRIVATE);
 
-        // ربط العناصر
         barcodeScanner = findViewById(R.id.barcode_scanner);
         ipInput = findViewById(R.id.ipInput);
         connectButton = findViewById(R.id.connectButton);
@@ -48,14 +47,12 @@ public class MainActivity extends AppCompatActivity {
         flashButton = findViewById(R.id.flashButton);
         lastConnectionText = findViewById(R.id.lastConnection);
 
-        // تحميل آخر IP
         String lastIp = prefs.getString("last_ip", "");
         if (!lastIp.isEmpty()) {
             ipInput.setText(lastIp);
             lastConnectionText.setText("آخر اتصال: " + lastIp);
         }
 
-        // طلب صلاحية الكاميرا
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -65,10 +62,8 @@ public class MainActivity extends AppCompatActivity {
             startScanner();
         }
 
-        // زر الاتصال
         connectButton.setOnClickListener(v -> connectToServer());
 
-        // النقر على آخر اتصال
         lastConnectionText.setOnClickListener(v -> {
             String savedIp = prefs.getString("last_ip", "");
             if (!savedIp.isEmpty()) {
@@ -77,19 +72,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // تبديل الكاميرا
         switchCameraButton.setOnClickListener(v -> {
             isFrontCamera = !isFrontCamera;
             barcodeScanner.pause();
+            
+            CameraSettings settings = barcodeScanner.getBarcodeView().getCameraSettings();
             if (isFrontCamera) {
-                barcodeScanner.getBarcodeView().setCameraId(1); // أمامية
+                settings.setRequestedCameraId(1);
             } else {
-                barcodeScanner.getBarcodeView().setCameraId(0); // خلفية
+                settings.setRequestedCameraId(0);
             }
+            barcodeScanner.getBarcodeView().setCameraSettings(settings);
+            
             barcodeScanner.resume();
         });
 
-        // الفلاش
         flashButton.setOnClickListener(v -> {
             if (!isFrontCamera) {
                 isFlashOn = !isFlashOn;
@@ -103,7 +100,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // فتح الإعدادات
         findViewById(R.id.settingsButton).setOnClickListener(v -> {
             Toast.makeText(this, "الإعدادات قريباً", Toast.LENGTH_SHORT).show();
         });
@@ -117,16 +113,13 @@ public class MainActivity extends AppCompatActivity {
                     String scannedText = result.getText();
                     barcodeScanner.pause();
                     
-                    // استخراج IP من النص الممسوح
                     String ip = extractIpFromText(scannedText);
                     if (ip != null) {
                         ipInput.setText(ip);
-                        // اهتزاز خفيف للتأكيد
                         android.os.Vibrator vibrator = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
                         if (vibrator != null) {
                             vibrator.vibrate(100);
                         }
-                        // اتصال تلقائي بعد ثانية
                         new Handler().postDelayed(() -> connectToServer(), 800);
                     }
                 }
@@ -134,22 +127,18 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void possibleResultPoints(java.util.List<com.google.zxing.ResultPoint> resultPoints) {
-                // تجاهل
             }
         });
         barcodeScanner.resume();
     }
 
     private String extractIpFromText(String text) {
-        // إذا كان رابط كامل
         if (text.startsWith("http://") || text.startsWith("https://")) {
             return text.replace("http://", "").replace("https://", "").split("/")[0];
         }
-        // إذا كان IP:PORT مباشرة
         if (text.matches(".*\\d+\\.\\d+\\.\\d+\\.\\d+.*")) {
             return text.replaceAll("[^0-9.:]", "");
         }
-        // إذا كان nova.local
         if (text.contains("nova.local")) {
             return text;
         }
@@ -164,21 +153,18 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // تنظيف الـ IP
         ip = ip.replace("http://", "").replace("https://", "");
         if (!ip.contains(":")) {
             ip = ip + ":3000";
         }
 
-        // حفظ الـ IP
-        prefs.edit().putString("last_ip", ip).apply();
-        lastConnectionText.setText("آخر اتصال: " + ip);
+        final String finalIp = ip;
+        prefs.edit().putString("last_ip", finalIp).apply();
+        lastConnectionText.setText("آخر اتصال: " + finalIp);
         
         connectButton.setText("جاري الاتصال...");
         connectButton.setEnabled(false);
 
-        // اختبار الاتصال في خلفية
-        final String finalIp = ip;
         new Thread(() -> {
             boolean reachable = testConnection(finalIp);
             runOnUiThread(() -> {
@@ -186,12 +172,10 @@ public class MainActivity extends AppCompatActivity {
                 connectButton.setEnabled(true);
                 
                 if (reachable) {
-                    // فتح WebView
                     Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
                     intent.putExtra("url", "http://" + finalIp + "/waiter");
                     startActivity(intent);
                 } else {
-                    // اقتراح فتح الرابط مباشرة
                     new androidx.appcompat.app.AlertDialog.Builder(MainActivity.this)
                         .setTitle("تعذر الاتصال")
                         .setMessage("لم نتمكن من الاتصال بـ " + finalIp + "\n\nهل تريد المحاولة مباشرة؟")
@@ -238,7 +222,6 @@ public class MainActivity extends AppCompatActivity {
         if (barcodeScanner != null) {
             barcodeScanner.resume();
         }
-        // تحميل آخر IP عند العودة
         String lastIp = prefs.getString("last_ip", "");
         if (!lastIp.isEmpty() && ipInput.getText().toString().isEmpty()) {
             ipInput.setText(lastIp);
