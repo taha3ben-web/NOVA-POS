@@ -6,7 +6,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -18,7 +17,6 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
 import com.journeyapps.barcodescanner.CompoundBarcodeView;
-import com.journeyapps.barcodescanner.camera.CameraSettings;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
@@ -27,11 +25,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_REQUEST = 100;
     private CompoundBarcodeView barcodeScanner;
     private TextInputEditText ipInput;
-    private MaterialButton connectButton, switchCameraButton, flashButton;
+    private MaterialButton connectButton;
     private TextView lastConnectionText;
     private SharedPreferences prefs;
-    private boolean isFlashOn = false;
-    private boolean isFrontCamera = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,16 +39,16 @@ public class MainActivity extends AppCompatActivity {
         barcodeScanner = findViewById(R.id.barcode_scanner);
         ipInput = findViewById(R.id.ipInput);
         connectButton = findViewById(R.id.connectButton);
-        switchCameraButton = findViewById(R.id.switchCameraButton);
-        flashButton = findViewById(R.id.flashButton);
         lastConnectionText = findViewById(R.id.lastConnection);
 
+        // آخر IP
         String lastIp = prefs.getString("last_ip", "");
         if (!lastIp.isEmpty()) {
             ipInput.setText(lastIp);
             lastConnectionText.setText("آخر اتصال: " + lastIp);
         }
 
+        // صلاحية الكاميرا
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
@@ -62,46 +58,16 @@ public class MainActivity extends AppCompatActivity {
             startScanner();
         }
 
+        // زر الاتصال
         connectButton.setOnClickListener(v -> connectToServer());
 
+        // آخر اتصال قابل للنقر
         lastConnectionText.setOnClickListener(v -> {
             String savedIp = prefs.getString("last_ip", "");
             if (!savedIp.isEmpty()) {
                 ipInput.setText(savedIp);
                 connectToServer();
             }
-        });
-
-        switchCameraButton.setOnClickListener(v -> {
-            isFrontCamera = !isFrontCamera;
-            barcodeScanner.pause();
-            
-            CameraSettings settings = barcodeScanner.getBarcodeView().getCameraSettings();
-            if (isFrontCamera) {
-                settings.setRequestedCameraId(1);
-            } else {
-                settings.setRequestedCameraId(0);
-            }
-            barcodeScanner.getBarcodeView().setCameraSettings(settings);
-            
-            barcodeScanner.resume();
-        });
-
-        flashButton.setOnClickListener(v -> {
-            if (!isFrontCamera) {
-                isFlashOn = !isFlashOn;
-                if (isFlashOn) {
-                    barcodeScanner.setTorchOn();
-                } else {
-                    barcodeScanner.setTorchOff();
-                }
-            } else {
-                Toast.makeText(this, "الفلاش يعمل فقط مع الكاميرا الخلفية", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        findViewById(R.id.settingsButton).setOnClickListener(v -> {
-            Toast.makeText(this, "الإعدادات قريباً", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -116,11 +82,7 @@ public class MainActivity extends AppCompatActivity {
                     String ip = extractIpFromText(scannedText);
                     if (ip != null) {
                         ipInput.setText(ip);
-                        android.os.Vibrator vibrator = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
-                        if (vibrator != null) {
-                            vibrator.vibrate(100);
-                        }
-                        new Handler().postDelayed(() -> connectToServer(), 800);
+                        new Handler().postDelayed(() -> connectToServer(), 500);
                     }
                 }
             }
@@ -138,9 +100,6 @@ public class MainActivity extends AppCompatActivity {
         }
         if (text.matches(".*\\d+\\.\\d+\\.\\d+\\.\\d+.*")) {
             return text.replaceAll("[^0-9.:]", "");
-        }
-        if (text.contains("nova.local")) {
-            return text;
         }
         return text;
     }
@@ -165,43 +124,14 @@ public class MainActivity extends AppCompatActivity {
         connectButton.setText("جاري الاتصال...");
         connectButton.setEnabled(false);
 
-        new Thread(() -> {
-            boolean reachable = testConnection(finalIp);
-            runOnUiThread(() -> {
-                connectButton.setText("اتصال بالسيرفر");
-                connectButton.setEnabled(true);
-                
-                if (reachable) {
-                    Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
-                    intent.putExtra("url", "http://" + finalIp + "/waiter");
-                    startActivity(intent);
-                } else {
-                    new androidx.appcompat.app.AlertDialog.Builder(MainActivity.this)
-                        .setTitle("تعذر الاتصال")
-                        .setMessage("لم نتمكن من الاتصال بـ " + finalIp + "\n\nهل تريد المحاولة مباشرة؟")
-                        .setPositiveButton("نعم", (dialog, which) -> {
-                            Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
-                            intent.putExtra("url", "http://" + finalIp + "/waiter");
-                            startActivity(intent);
-                        })
-                        .setNegativeButton("لا", null)
-                        .show();
-                }
-            });
-        }).start();
-    }
-
-    private boolean testConnection(String ip) {
-        try {
-            String host = ip.split(":")[0];
-            int port = ip.contains(":") ? Integer.parseInt(ip.split(":")[1]) : 3000;
-            Socket socket = new Socket();
-            socket.connect(new InetSocketAddress(host, port), 3000);
-            socket.close();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        // فتح مباشر بدون اختبار الاتصال
+        new Handler().postDelayed(() -> {
+            connectButton.setText("اتصال");
+            connectButton.setEnabled(true);
+            Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
+            intent.putExtra("url", "http://" + finalIp + "/waiter");
+            startActivity(intent);
+        }, 300);
     }
 
     @Override
@@ -211,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startScanner();
             } else {
-                Toast.makeText(this, "صلاحية الكاميرا مطلوبة لمسح QR Code", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "صلاحية الكاميرا مطلوبة", Toast.LENGTH_LONG).show();
             }
         }
     }
