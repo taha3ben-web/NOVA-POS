@@ -1,177 +1,393 @@
 package com.nova.pos;
 
-import android.Manifest;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
+import android.content.pm.ActivityInfo;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
+import android.view.GestureDetector;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+import android.view.View;
+import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.ImageButton;
+import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.textfield.TextInputEditText;
-import com.journeyapps.barcodescanner.BarcodeCallback;
-import com.journeyapps.barcodescanner.BarcodeResult;
-import com.journeyapps.barcodescanner.CompoundBarcodeView;
-import java.net.InetSocketAddress;
-import java.net.Socket;
+import androidx.appcompat.widget.Toolbar;
 
-public class MainActivity extends AppCompatActivity {
+public class WebViewActivity extends AppCompatActivity {
 
-    private static final int CAMERA_PERMISSION_REQUEST = 100;
-    private CompoundBarcodeView barcodeScanner;
-    private TextInputEditText ipInput;
-    private MaterialButton connectButton;
-    private TextView lastConnectionText;
-    private SharedPreferences prefs;
+    private WebView webView;
+    private ProgressBar progressBar;
+    private TextView errorText;
+    private ImageButton backButton;
+    private Toolbar toolbar;
+    private String currentUrl;
+    private ValueCallback<Uri[]> fileUploadCallback;
+    private static final int FILE_CHOOSER_REQUEST = 100;
+
+    // حالة ملء الشاشة
+    private boolean isFullscreen = false;
+    private GestureDetector gestureDetector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_webview);
 
-        prefs = getSharedPreferences("NovaPOS", MODE_PRIVATE);
+        // السماح بالدوران الحر
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
 
-        barcodeScanner = findViewById(R.id.barcode_scanner);
-        ipInput = findViewById(R.id.ipInput);
-        connectButton = findViewById(R.id.connectButton);
-        lastConnectionText = findViewById(R.id.lastConnection);
+        toolbar = findViewById(R.id.toolbar);
+        webView = findViewById(R.id.webView);
+        progressBar = findViewById(R.id.progressBar);
+        errorText = findViewById(R.id.errorText);
+        backButton = findViewById(R.id.backButton);
 
-        // آخر IP
-        String lastIp = prefs.getString("last_ip", "");
-        if (!lastIp.isEmpty()) {
-            ipInput.setText(lastIp);
-            lastConnectionText.setText("آخر اتصال: " + lastIp);
-        }
+        backButton.setOnClickListener(v -> finish());
 
-        // صلاحية الكاميرا
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.CAMERA},
-                    CAMERA_PERMISSION_REQUEST);
-        } else {
-            startScanner();
-        }
-
-        // زر الاتصال
-        connectButton.setOnClickListener(v -> connectToServer());
-
-        // آخر اتصال قابل للنقر
-        lastConnectionText.setOnClickListener(v -> {
-            String savedIp = prefs.getString("last_ip", "");
-            if (!savedIp.isEmpty()) {
-                ipInput.setText(savedIp);
-                connectToServer();
+        // كاشف النقر المزدوج لتبديل ملء الشاشة
+        gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDoubleTap(MotionEvent e) {
+                toggleFullscreen();
+                return true;
             }
         });
+
+        webView.setOnTouchListener((v, event) -> {
+            gestureDetector.onTouchEvent(event);
+            return false; // نسمح لـ WebView بمعالجة اللمس أيضاً
+        });
+
+        // الحصول على الرابط
+        currentUrl = getIntent().getStringExtra("url");
+        if (currentUrl == null || currentUrl.isEmpty()) {
+            Intent intent = getIntent();
+            if (intent != null && intent.getData() != null) {
+                currentUrl = intent.getData().toString();
+            }
+            if (currentUrl == null || currentUrl.isEmpty()) {
+                currentUrl = "http://100.111.42.87:3000/waiter";
+            }
+        }
+
+        setupWebView();
+        webView.loadUrl(currentUrl);
     }
 
-    private void startScanner() {
-        barcodeScanner.setStatusText("");
-        barcodeScanner.decodeContinuous(new BarcodeCallback() {
+    // =====================================================================
+    // ملء الشاشة
+    // =====================================================================
+
+    /**
+     * تبديل وضع ملء الشاشة
+     */
+    private void toggleFullscreen() {
+        setFullscreenMode(!isFullscreen);
+    }
+
+    /**
+     * تفعيل أو إلغاء وضع ملء الشاشة
+     */
+    private void setFullscreenMode(boolean enable) {
+        isFullscreen = enable;
+        View decorView = getWindow().getDecorView();
+
+        if (enable) {
+            // إخفاء شريط الأدوات
+            toolbar.setVisibility(View.GONE);
+
+            // تدوير الشاشة أفقياً
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+
+            // إخفاء شريط النظام وأزرار التنقل
+            decorView.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            );
+        } else {
+            // إظهار شريط الأدوات
+            toolbar.setVisibility(View.VISIBLE);
+
+            // السماح بالدوران الحر مجدداً
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+
+            // إظهار شريط النظام وأزرار التنقل
+            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        // الحفاظ على وضع ملء الشاشة عند العودة للتطبيق
+        if (hasFocus && isFullscreen) {
+            View decorView = getWindow().getDecorView();
+            decorView.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            );
+        }
+    }
+
+    // =====================================================================
+    // JavaScript Interface - يتيح لـ waiter.html التحكم في ملء الشاشة
+    // =====================================================================
+
+    private class FullscreenInterface {
+
+        /**
+         * استدعاء من JavaScript: window.AndroidFullscreen.enterFullscreen()
+         */
+        @JavascriptInterface
+        public void enterFullscreen() {
+            runOnUiThread(() -> setFullscreenMode(true));
+        }
+
+        /**
+         * استدعاء من JavaScript: window.AndroidFullscreen.exitFullscreen()
+         */
+        @JavascriptInterface
+        public void exitFullscreen() {
+            runOnUiThread(() -> setFullscreenMode(false));
+        }
+
+        /**
+         * استدعاء من JavaScript: window.AndroidFullscreen.toggleFullscreen()
+         */
+        @JavascriptInterface
+        public void toggleFullscreen() {
+            runOnUiThread(() -> WebViewActivity.this.toggleFullscreen());
+        }
+
+        /**
+         * استدعاء من JavaScript: window.AndroidFullscreen.isFullscreen()
+         */
+        @JavascriptInterface
+        public boolean isFullscreen() {
+            return WebViewActivity.this.isFullscreen;
+        }
+
+        /**
+         * استدعاء من JavaScript: window.AndroidFullscreen.setLandscape(true/false)
+         */
+        @JavascriptInterface
+        public void setLandscape(boolean landscape) {
+            runOnUiThread(() -> {
+                if (landscape) {
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+                } else {
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+                }
+            });
+        }
+    }
+
+    // =====================================================================
+    // إعداد WebView
+    // =====================================================================
+
+    private void setupWebView() {
+        WebSettings settings = webView.getSettings();
+
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+
+        String dbPath = this.getApplicationContext().getDir("database", MODE_PRIVATE).getPath();
+        settings.setDatabasePath(dbPath);
+
+        CookieManager.getInstance().setAcceptCookie(true);
+        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
+
+        // تسجيل JavaScript Interface للتحكم في ملء الشاشة من waiter.html
+        // الاستخدام في JS: window.AndroidFullscreen.enterFullscreen()
+        webView.addJavascriptInterface(new FullscreenInterface(), "AndroidFullscreen");
+
+        webView.setWebViewClient(new WebViewClient() {
             @Override
-            public void barcodeResult(BarcodeResult result) {
-                if (result.getText() != null) {
-                    String scannedText = result.getText();
-                    barcodeScanner.pause();
-                    
-                    String ip = extractIpFromText(scannedText);
-                    if (ip != null) {
-                        ipInput.setText(ip);
-                        new Handler().postDelayed(() -> connectToServer(), 500);
-                    }
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                progressBar.setVisibility(View.VISIBLE);
+                errorText.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                progressBar.setVisibility(View.GONE);
+                currentUrl = url;
+
+                // حقن كود JS لربط زر الـ fullscreen في waiter.html بالواجهة الأصلية
+                webView.evaluateJavascript(
+                    "(function() {" +
+                    "  if (window.AndroidFullscreen) {" +
+                    "    console.log('[NOVA] AndroidFullscreen interface ready');" +
+                    // ربط أزرار fullscreen الموجودة في waiter.html
+                    "    var fsButtons = document.querySelectorAll(" +
+                    "      '[onclick*=\"fullscreen\"], [onclick*=\"Fullscreen\"], .fullscreen-btn, #fullscreenBtn, #fullscreen-btn'" +
+                    "    );" +
+                    "    fsButtons.forEach(function(btn) {" +
+                    "      btn.addEventListener('click', function(e) {" +
+                    "        window.AndroidFullscreen.toggleFullscreen();" +
+                    "      }, true);" +
+                    "    });" +
+                    "  }" +
+                    "})();",
+                    null
+                );
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                progressBar.setVisibility(View.GONE);
+                if (request.isForMainFrame()) {
+                    errorText.setVisibility(View.VISIBLE);
                 }
             }
 
             @Override
-            public void possibleResultPoints(java.util.List<com.google.zxing.ResultPoint> resultPoints) {
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                view.loadUrl(request.getUrl().toString());
+                return true;
             }
         });
-        barcodeScanner.resume();
+
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onProgressChanged(WebView view, int newProgress) {
+                progressBar.setProgress(newProgress);
+                if (newProgress == 100) {
+                    progressBar.setVisibility(View.GONE);
+                }
+            }
+
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback,
+                                             FileChooserParams fileChooserParams) {
+                if (fileUploadCallback != null) {
+                    fileUploadCallback.onReceiveValue(null);
+                }
+                fileUploadCallback = filePathCallback;
+
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("image/*");
+                startActivityForResult(Intent.createChooser(intent, "اختر صورة"), FILE_CHOOSER_REQUEST);
+                return true;
+            }
+
+            // دعم الـ fullscreen الأصلي من HTML5 (<video> وغيرها)
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                setFullscreenMode(true);
+            }
+
+            @Override
+            public void onHideCustomView() {
+                setFullscreenMode(false);
+            }
+        });
+
+        errorText.setOnClickListener(v -> {
+            errorText.setVisibility(View.GONE);
+            webView.loadUrl(currentUrl);
+        });
     }
 
-    private String extractIpFromText(String text) {
-        if (text.startsWith("http://") || text.startsWith("https://")) {
-            return text.replace("http://", "").replace("https://", "").split("/")[0];
-        }
-        if (text.matches(".*\\d+\\.\\d+\\.\\d+\\.\\d+.*")) {
-            return text.replaceAll("[^0-9.:]", "");
-        }
-        return text;
-    }
-
-    private void connectToServer() {
-        String ip = ipInput.getText().toString().trim();
-        
-        if (ip.isEmpty()) {
-            Toast.makeText(this, "الرجاء إدخال عنوان السيرفر", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        ip = ip.replace("http://", "").replace("https://", "");
-        if (!ip.contains(":")) {
-            ip = ip + ":3000";
-        }
-
-        final String finalIp = ip;
-        prefs.edit().putString("last_ip", finalIp).apply();
-        lastConnectionText.setText("آخر اتصال: " + finalIp);
-        
-        connectButton.setText("جاري الاتصال...");
-        connectButton.setEnabled(false);
-
-        // فتح مباشر بدون اختبار الاتصال
-        new Handler().postDelayed(() -> {
-            connectButton.setText("اتصال");
-            connectButton.setEnabled(true);
-            Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
-            intent.putExtra("url", "http://" + finalIp + "/waiter");
-            startActivity(intent);
-        }, 300);
-    }
+    // =====================================================================
+    // Activity Lifecycle
+    // =====================================================================
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == CAMERA_PERMISSION_REQUEST) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startScanner();
-            } else {
-                Toast.makeText(this, "صلاحية الكاميرا مطلوبة", Toast.LENGTH_LONG).show();
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQUEST) {
+            if (fileUploadCallback != null) {
+                Uri[] results = null;
+                if (resultCode == RESULT_OK && data != null) {
+                    Uri uri = data.getData();
+                    if (uri != null) {
+                        results = new Uri[]{uri};
+                    }
+                }
+                fileUploadCallback.onReceiveValue(results);
+                fileUploadCallback = null;
             }
         }
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (barcodeScanner != null) {
-            barcodeScanner.resume();
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent != null && intent.getData() != null) {
+            String url = intent.getData().toString();
+            if (url != null && !url.isEmpty()) {
+                webView.loadUrl(url);
+            }
         }
-        String lastIp = prefs.getString("last_ip", "");
-        if (!lastIp.isEmpty() && ipInput.getText().toString().isEmpty()) {
-            ipInput.setText(lastIp);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            // الخروج من ملء الشاشة أولاً بدلاً من الرجوع
+            if (isFullscreen) {
+                setFullscreenMode(false);
+                return true;
+            }
+            if (webView.canGoBack()) {
+                webView.goBack();
+                return true;
+            }
         }
+        return super.onKeyDown(keyCode, event);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        if (barcodeScanner != null) {
-            barcodeScanner.pause();
-        }
+        webView.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        webView.onResume();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (barcodeScanner != null) {
-            barcodeScanner.pause();
+        if (webView != null) {
+            webView.destroy();
         }
     }
 }
