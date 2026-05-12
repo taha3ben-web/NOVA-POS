@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <!-- زر الرجوع في اليسار -->
+            <!-- زر الرجوع -->
             <ImageButton
                 android:id="@+id/backButton"
                 android:layout_width="48dp"
@@ -31,7 +31,7 @@
                 android:contentDescription="رجوع"
                 android:layout_marginStart="4dp"/>
 
-            <!-- شعار NOVA + نص في المنتصف -->
+            <!-- شعار NOVA بدون خلفية + نص -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
@@ -40,9 +40,9 @@
                 android:orientation="horizontal">
 
                 <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@mipmap/ic_launcher"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:src="@drawable/logo_nova"
                     android:scaleType="fitCenter"/>
 
                 <TextView
