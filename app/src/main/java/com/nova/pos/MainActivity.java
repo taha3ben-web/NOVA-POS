@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startScanner() {
+        barcodeScanner.setStatusText("");
         barcodeScanner.decodeContinuous(new BarcodeCallback() {
             @Override
             public void barcodeResult(BarcodeResult result) {
