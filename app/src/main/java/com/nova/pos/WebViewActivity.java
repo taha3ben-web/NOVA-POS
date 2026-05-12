@@ -1,5 +1,6 @@
 package com.nova.pos;
 
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -17,10 +18,8 @@ import android.webkit.WebViewClient;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import android.content.Intent;
 
 public class WebViewActivity extends AppCompatActivity {
 
@@ -37,8 +36,8 @@ public class WebViewActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_webview);
 
-        // السماح بالوضع الأفقي
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER);
+        // السماح بالدوران الحر
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         webView = findViewById(R.id.webView);
@@ -48,9 +47,17 @@ public class WebViewActivity extends AppCompatActivity {
 
         backButton.setOnClickListener(v -> finish());
 
+        // الحصول على الرابط
         currentUrl = getIntent().getStringExtra("url");
         if (currentUrl == null || currentUrl.isEmpty()) {
-            currentUrl = "http://100.111.42.87:3000/waiter";
+            // التعامل مع NFC أو الروابط الخارجية
+            Intent intent = getIntent();
+            if (intent != null && intent.getData() != null) {
+                currentUrl = intent.getData().toString();
+            }
+            if (currentUrl == null || currentUrl.isEmpty()) {
+                currentUrl = "http://100.111.42.87:3000/waiter";
+            }
         }
 
         setupWebView();
@@ -75,15 +82,12 @@ public class WebViewActivity extends AppCompatActivity {
         settings.setAllowUniversalAccessFromFileURLs(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         
-        // دعم localStorage
         String dbPath = this.getApplicationContext().getDir("database", MODE_PRIVATE).getPath();
         settings.setDatabasePath(dbPath);
 
-        // Cookies
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
-        // WebViewClient
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -112,7 +116,6 @@ public class WebViewActivity extends AppCompatActivity {
             }
         });
 
-        // WebChromeClient - يدعم رفع الملفات وملء الشاشة
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
@@ -122,7 +125,6 @@ public class WebViewActivity extends AppCompatActivity {
                 }
             }
 
-            // دعم رفع الملفات (لصور الصالة)
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback,
                                              FileChooserParams fileChooserParams) {
@@ -139,14 +141,12 @@ public class WebViewActivity extends AppCompatActivity {
             }
         });
 
-        // زر إعادة المحاولة
         errorText.setOnClickListener(v -> {
             errorText.setVisibility(View.GONE);
             webView.loadUrl(currentUrl);
         });
     }
 
-    // استقبال نتيجة اختيار الملف
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -161,6 +161,18 @@ public class WebViewActivity extends AppCompatActivity {
                 }
                 fileUploadCallback.onReceiveValue(results);
                 fileUploadCallback = null;
+            }
+        }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // التعامل مع NFC أثناء تشغيل التطبيق
+        if (intent != null && intent.getData() != null) {
+            String url = intent.getData().toString();
+            if (url != null && !url.isEmpty()) {
+                webView.loadUrl(url);
             }
         }
     }
