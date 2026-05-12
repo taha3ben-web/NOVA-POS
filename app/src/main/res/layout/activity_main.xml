@@ -9,8 +9,8 @@
     <!-- شعار NOVA بدون خلفية -->
     <ImageView
         android:id="@+id/logoImage"
-        android:layout_width="130dp"
-        android:layout_height="130dp"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
         android:src="@drawable/logo_nova"
         android:contentDescription="NOVA Logo"
         android:scaleType="fitCenter"
