@@ -1,10 +1,13 @@
 package com.nova.pos;
 
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.CookieManager;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -17,6 +20,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import android.content.Intent;
 
 public class WebViewActivity extends AppCompatActivity {
 
@@ -25,39 +29,37 @@ public class WebViewActivity extends AppCompatActivity {
     private TextView errorText;
     private ImageButton backButton;
     private String currentUrl;
+    private ValueCallback<Uri[]> fileUploadCallback;
+    private static final int FILE_CHOOSER_REQUEST = 100;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_webview);
 
-        // ربط العناصر
+        // السماح بالوضع الأفقي
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER);
+
         Toolbar toolbar = findViewById(R.id.toolbar);
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
         errorText = findViewById(R.id.errorText);
         backButton = findViewById(R.id.backButton);
 
-        // زر الرجوع
         backButton.setOnClickListener(v -> finish());
 
-        // الحصول على الرابط
         currentUrl = getIntent().getStringExtra("url");
         if (currentUrl == null || currentUrl.isEmpty()) {
             currentUrl = "http://100.111.42.87:3000/waiter";
         }
 
-        // إعداد WebView
         setupWebView();
-
-        // تحميل الصفحة
         webView.loadUrl(currentUrl);
     }
 
     private void setupWebView() {
         WebSettings settings = webView.getSettings();
         
-        // تمكين الميزات
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
@@ -69,9 +71,11 @@ public class WebViewActivity extends AppCompatActivity {
         settings.setDisplayZoomControls(false);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setAllowFileAccessFromFileURLs(true);
+        settings.setAllowUniversalAccessFromFileURLs(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
         
         // دعم localStorage
-        settings.setDatabaseEnabled(true);
         String dbPath = this.getApplicationContext().getDir("database", MODE_PRIVATE).getPath();
         settings.setDatabasePath(dbPath);
 
@@ -103,13 +107,12 @@ public class WebViewActivity extends AppCompatActivity {
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                // فتح جميع الروابط داخل WebView
                 view.loadUrl(request.getUrl().toString());
                 return true;
             }
         });
 
-        // WebChromeClient
+        // WebChromeClient - يدعم رفع الملفات وملء الشاشة
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
@@ -118,6 +121,22 @@ public class WebViewActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                 }
             }
+
+            // دعم رفع الملفات (لصور الصالة)
+            @Override
+            public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback,
+                                             FileChooserParams fileChooserParams) {
+                if (fileUploadCallback != null) {
+                    fileUploadCallback.onReceiveValue(null);
+                }
+                fileUploadCallback = filePathCallback;
+
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("image/*");
+                startActivityForResult(Intent.createChooser(intent, "اختر صورة"), FILE_CHOOSER_REQUEST);
+                return true;
+            }
         });
 
         // زر إعادة المحاولة
@@ -125,6 +144,25 @@ public class WebViewActivity extends AppCompatActivity {
             errorText.setVisibility(View.GONE);
             webView.loadUrl(currentUrl);
         });
+    }
+
+    // استقبال نتيجة اختيار الملف
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == FILE_CHOOSER_REQUEST) {
+            if (fileUploadCallback != null) {
+                Uri[] results = null;
+                if (resultCode == RESULT_OK && data != null) {
+                    Uri uri = data.getData();
+                    if (uri != null) {
+                        results = new Uri[]{uri};
+                    }
+                }
+                fileUploadCallback.onReceiveValue(results);
+                fileUploadCallback = null;
+            }
+        }
     }
 
     @Override
